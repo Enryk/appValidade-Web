@@ -1,0 +1,99 @@
+using Microsoft.EntityFrameworkCore;
+using MeuApp.Shared.Models;
+
+namespace MeuApp.Shared.Data;
+
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
+
+    public DbSet<Loja> Lojas => Set<Loja>();
+    public DbSet<Produto> Produtos => Set<Produto>();
+    public DbSet<RegistroValidade> RegistrosValidade => Set<RegistroValidade>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<Conta> Contas => Set<Conta>();
+    public DbSet<MembroTime> MembrosTime => Set<MembroTime>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Conta>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
+        });
+
+        modelBuilder.Entity<MembroTime>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(180);
+            entity.Property(e => e.Nome).HasMaxLength(150);
+            entity.Property(e => e.Papel).IsRequired().HasMaxLength(50);
+
+            entity.HasIndex(e => e.ContaId);
+            entity.HasIndex(e => e.Email);
+            entity.HasIndex(e => new { e.ContaId, e.Email }).IsUnique();
+        });
+
+        modelBuilder.Entity<Loja>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.CodigoLoja).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.ContaId);
+        });
+
+        modelBuilder.Entity<Produto>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CodigoBarras).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(250);
+
+            entity.HasIndex(e => e.ContaId);
+            // Código de barras único por conta
+            entity.HasIndex(e => new { e.ContaId, e.CodigoBarras }).IsUnique();
+        });
+
+        modelBuilder.Entity<RegistroValidade>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.MotivoBaixa).HasMaxLength(150);
+
+            entity.HasIndex(e => e.ContaId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.DataValidade);
+            entity.HasIndex(e => e.DataBaixa);
+            entity.HasIndex(e => e.LojaId);
+
+            entity.HasOne(e => e.Produto)
+                  .WithMany(p => p.Validades)
+                  .HasForeignKey(e => e.ProdutoId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Loja)
+                  .WithMany(l => l.Validades)
+                  .HasForeignKey(e => e.LojaId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Usuario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(180);
+            entity.Property(e => e.SenhaHash).IsRequired();
+            entity.Property(e => e.SenhaSalt).IsRequired();
+
+            entity.HasIndex(e => e.ContaId);
+            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.TokenConfirmacao);
+            entity.HasIndex(e => e.CodigoConfirmacao);
+            entity.HasIndex(e => e.TokenRedefinicaoSenha);
+            entity.HasIndex(e => e.CodigoRedefinicaoSenha);
+        });
+    }
+}

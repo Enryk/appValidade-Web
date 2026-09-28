@@ -1,0 +1,30 @@
+﻿## [Visual Studio / .NET]
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## [Build Results]
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+
+## [Database / SQLite]
+*.db
+*.db-shm
+*.db-wal
+Data/*.db
+Data/*.db-shm
+Data/*.db-wal
+
+## [OS Files]
+.DS_Store
+Thumbs.db

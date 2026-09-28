@@ -1,0 +1,153 @@
+.auth-loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 16px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.auth-loading-spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: authSpin 0.7s linear infinite;
+}
+
+@keyframes authSpin {
+    to { transform: rotate(360deg); }
+}
+
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f8fafc;
+    color: #0f172a;
+}
+
+.sidebar-wrapper {
+    background-color: #0f172a;
+    width: 100%;
+    z-index: 100;
+}
+
+.main-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Impede que tabelas ou flex items forcem o esmagamento da sidebar */
+    background-color: #f8fafc;
+}
+
+.content-body {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Telas Tablet e Desktop (Windows Desktop) */
+@media (min-width: 768px) {
+    .app-layout {
+        flex-direction: row;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .sidebar-wrapper {
+        width: 250px;
+        min-width: 250px;
+        max-width: 250px;
+        flex-shrink: 0;
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-right: 1px solid #1e293b;
+        transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.22s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .app-layout.sidebar-collapsed .sidebar-wrapper {
+        width: 70px;
+        min-width: 70px;
+        max-width: 70px;
+    }
+
+    .main-content-wrapper {
+        flex: 1;
+        min-width: 0;
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+}
+
+/* Auto-recolhimento do menu em telas intermediárias para evitar corte de dados na tabela */
+@media (min-width: 768px) and (max-width: 1180px) {
+    .sidebar-wrapper {
+        width: 70px !important;
+        min-width: 70px !important;
+        max-width: 70px !important;
+    }
+}
+
+/* Fallback Seguro de Erro (ErrorBoundary) */
+.error-boundary-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 24px;
+}
+
+.error-boundary-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 32px 24px;
+    max-width: 460px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+.error-boundary-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.error-boundary-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+}
+
+.error-boundary-card p {
+    font-size: 0.88rem;
+    color: #64748b;
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+}
+
+.btn-recuperar-erro {
+    background: #6366f1;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.btn-recuperar-erro:hover {
+    background: #4f46e5;
+}

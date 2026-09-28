@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MeuApp.Shared/MeuApp.Shared.csproj" />
+  <Project Path="MeuApp.Web/MeuApp.Web.csproj" />
+</Solution>
