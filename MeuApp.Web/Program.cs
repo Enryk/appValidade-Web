@@ -1,7 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MeuApp.Web.Components;
 using MeuApp.Shared.Data;
 using MeuApp.Shared.Services;
+
+// Compatibilidade de DateTime com PostgreSQL (Npgsql)
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,23 +12,33 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Database (SQLite)
-var dbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "app_validade.db");
-var dataDir = Path.GetDirectoryName(dbPath);
-if (!string.IsNullOrEmpty(dataDir) && !Directory.Exists(dataDir))
-{
-    Directory.CreateDirectory(dataDir);
-}
+// Database Configuration (PostgreSQL / Supabase with local SQLite fallback)
+var postgresConnection = builder.Configuration.GetConnectionString("PostgresConnection")
+                         ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
 {
-    options.UseSqlite($"Data Source={dbPath}");
+    if (!string.IsNullOrWhiteSpace(postgresConnection))
+    {
+        options.UseNpgsql(postgresConnection);
+    }
+    else
+    {
+        var dbPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "app_validade.db");
+        var dataDir = Path.GetDirectoryName(dbPath);
+        if (!string.IsNullOrEmpty(dataDir) && !Directory.Exists(dataDir))
+        {
+            Directory.CreateDirectory(dataDir);
+        }
+        options.UseSqlite($"Data Source={dbPath}");
+    }
 });
 
 // Services
 builder.Services.AddScoped<IValidadeService, ValidadeService>();
 builder.Services.AddSingleton<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IThemeService, ThemeService>();
 
 var app = builder.Build();
 

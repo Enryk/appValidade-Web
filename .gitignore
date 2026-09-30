@@ -1,4 +1,4 @@
-﻿## [Visual Studio / .NET]
+## [Visual Studio / .NET]
 [Bb]in/
 [Oo]bj/
 [Ll]og/
@@ -28,3 +28,9 @@ Data/*.db-wal
 ## [OS Files]
 .DS_Store
 Thumbs.db
+
+## [Secrets & Local Config]
+appsettings.Development.json
+appsettings.Local.json
+**/appsettings.Development.json
+**/appsettings.Local.json
