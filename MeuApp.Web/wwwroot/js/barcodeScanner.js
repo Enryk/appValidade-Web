@@ -1,7 +1,5 @@
-// barcodeScanner.js - ValiData Camera Barcode Reader
+// barcodeScanner.js - ValiData Camera Barcode Reader (Mobile-first, iOS Safari & Android Chrome)
 window.validataScanner = {
-    stream: null,
-    animationFrameId: null,
     html5QrCode: null,
     ativo: false,
 
@@ -28,117 +26,137 @@ window.validataScanner = {
         }
     },
 
-    iniciar: async function(dotNetHelper, videoElementId, containerId) {
-        window.validataScanner.parar();
+    iniciar: async function(dotNetHelper, containerId) {
+        await window.validataScanner.parar();
         window.validataScanner.ativo = true;
 
-        const video = document.getElementById(videoElementId);
-        if (!video) return false;
-
-        // Tenta 1: BarcodeDetector Nativo (Ultrarrápido, Chrome/Edge/Safari moderno)
-        if ('BarcodeDetector' in window) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { ideal: 'environment' },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: false
-                });
-
-                window.validataScanner.stream = stream;
-                video.srcObject = stream;
-                await video.play();
-
-                const detector = new BarcodeDetector({
-                    formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code']
-                });
-
-                const scanFrame = async () => {
-                    if (!window.validataScanner.ativo) return;
-
-                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                        try {
-                            const barcodes = await detector.detect(video);
-                            if (barcodes && barcodes.length > 0) {
-                                const code = barcodes[0].rawValue;
-                                if (code && code.trim().length > 0) {
-                                    window.validataScanner.beep();
-                                    window.validataScanner.parar();
-                                    dotNetHelper.invokeMethodAsync('OnCodigoBarrasDetectado', code.trim());
-                                    return;
-                                }
-                            }
-                        } catch (err) {}
-                    }
-                    window.validataScanner.animationFrameId = requestAnimationFrame(scanFrame);
-                };
-
-                window.validataScanner.animationFrameId = requestAnimationFrame(scanFrame);
-                return true;
-            } catch (err) {
-                console.warn('Erro ao usar BarcodeDetector nativo, tentando fallback:', err);
-            }
+        // 1. Aguarda elemento container estar pronto no DOM
+        let container = document.getElementById(containerId);
+        let tentativas = 0;
+        while (!container && tentativas < 25) {
+            await new Promise(r => setTimeout(r, 100));
+            container = document.getElementById(containerId);
+            tentativas++;
         }
 
-        // Tenta 2: Html5Qrcode Library (Fallback universal para qualquer navegador)
-        if (window.Html5Qrcode && containerId) {
+        if (!container) {
+            console.error('[ValiData Scanner] Elemento container não encontrado no DOM:', containerId);
+            return false;
+        }
+
+        // 2. Aguarda carregamento da biblioteca Html5Qrcode se necessário
+        let libTentativas = 0;
+        while (!window.Html5Qrcode && libTentativas < 20) {
+            await new Promise(r => setTimeout(r, 100));
+            libTentativas++;
+        }
+
+        if (!window.Html5Qrcode) {
+            console.error('[ValiData Scanner] Biblioteca Html5Qrcode não encontrada.');
+            return false;
+        }
+
+        try {
+            // Limpa conteúdo anterior do container
+            container.innerHTML = '';
+
+            const formats = window.Html5QrcodeSupportedFormats ? [
+                window.Html5QrcodeSupportedFormats.EAN_13,
+                window.Html5QrcodeSupportedFormats.EAN_8,
+                window.Html5QrcodeSupportedFormats.CODE_128,
+                window.Html5QrcodeSupportedFormats.CODE_39,
+                window.Html5QrcodeSupportedFormats.UPC_A,
+                window.Html5QrcodeSupportedFormats.UPC_E,
+                window.Html5QrcodeSupportedFormats.QR_CODE
+            ] : undefined;
+
+            const qr = new Html5Qrcode(containerId, {
+                formatsToSupport: formats,
+                verbose: false,
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
+            });
+
+            window.validataScanner.html5QrCode = qr;
+
+            const scanConfig = {
+                fps: 15,
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const w = Math.min(Math.floor(viewfinderWidth * 0.88), 340);
+                    const h = Math.min(Math.floor(viewfinderHeight * 0.55), 180);
+                    return { width: Math.max(w, 200), height: Math.max(h, 120) };
+                },
+                aspectRatio: 1.333333
+            };
+
+            const onScanSuccess = async (decodedText) => {
+                if (decodedText && window.validataScanner.ativo) {
+                    window.validataScanner.ativo = false;
+                    window.validataScanner.beep();
+                    await window.validataScanner.parar();
+                    dotNetHelper.invokeMethodAsync('OnCodigoBarrasDetectado', decodedText.trim());
+                }
+            };
+
+            const onScanFailure = (error) => {
+                // Silencioso para frames sem código
+            };
+
+            // Inicia usando facingMode 'environment' (câmera traseira)
             try {
-                const qr = new Html5Qrcode(containerId);
-                window.validataScanner.html5QrCode = qr;
-
-                const config = {
-                    fps: 15,
-                    qrbox: { width: 260, height: 180 },
-                    aspectRatio: 1.0
-                };
-
+                await qr.start(
+                    { facingMode: { ideal: 'environment' } },
+                    scanConfig,
+                    onScanSuccess,
+                    onScanFailure
+                );
+            } catch (cameraErr) {
+                console.warn('[ValiData Scanner] Tentando fallback para camera genérica:', cameraErr);
                 await qr.start(
                     { facingMode: 'environment' },
-                    config,
-                    (decodedText) => {
-                        if (decodedText && window.validataScanner.ativo) {
-                            window.validataScanner.beep();
-                            window.validataScanner.parar();
-                            dotNetHelper.invokeMethodAsync('OnCodigoBarrasDetectado', decodedText.trim());
-                        }
-                    },
-                    (errorMessage) => {}
+                    scanConfig,
+                    onScanSuccess,
+                    onScanFailure
                 );
-                return true;
-            } catch (err) {
-                console.error('Erro ao iniciar Html5Qrcode:', err);
-                return false;
             }
-        }
 
-        return false;
+            // Garante que o elemento de vídeo gerado funcione perfeitamente no iOS Safari
+            setTimeout(() => {
+                const video = container.querySelector('video');
+                if (video) {
+                    video.setAttribute('playsinline', 'true');
+                    video.setAttribute('webkit-playsinline', 'true');
+                    video.muted = true;
+                    video.autoplay = true;
+                    video.style.width = '100%';
+                    video.style.height = '100%';
+                    video.style.objectFit = 'cover';
+                    video.play().catch(() => {});
+                }
+            }, 100);
+
+            return true;
+        } catch (err) {
+            console.error('[ValiData Scanner] Falha ao iniciar câmera:', err);
+            window.validataScanner.parar();
+            return false;
+        }
     },
 
-    parar: function() {
+    parar: async function() {
         window.validataScanner.ativo = false;
 
-        if (window.validataScanner.animationFrameId) {
-            cancelAnimationFrame(window.validataScanner.animationFrameId);
-            window.validataScanner.animationFrameId = null;
-        }
-
-        if (window.validataScanner.stream) {
-            window.validataScanner.stream.getTracks().forEach(track => track.stop());
-            window.validataScanner.stream = null;
-        }
-
         if (window.validataScanner.html5QrCode) {
+            const qr = window.validataScanner.html5QrCode;
+            window.validataScanner.html5QrCode = null;
             try {
-                window.validataScanner.html5QrCode.stop().then(() => {
-                    window.validataScanner.html5QrCode.clear();
-                    window.validataScanner.html5QrCode = null;
-                }).catch(() => {
-                    window.validataScanner.html5QrCode = null;
-                });
+                if (qr.isScanning) {
+                    await qr.stop();
+                }
+                qr.clear();
             } catch (e) {
-                window.validataScanner.html5QrCode = null;
+                // Silencioso se já parado
             }
         }
     }
