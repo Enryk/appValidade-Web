@@ -34,6 +34,25 @@
                 }
             }
         };
+        window.validataAuth = {
+            getToken: function() {
+                try {
+                    return localStorage.getItem('validata_auth_token') || '';
+                } catch(e) {
+                    return '';
+                }
+            },
+            setToken: function(token) {
+                try {
+                    localStorage.setItem('validata_auth_token', token);
+                } catch(e) {}
+            },
+            removeToken: function() {
+                try {
+                    localStorage.removeItem('validata_auth_token');
+                } catch(e) {}
+            }
+        };
     </script>
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
